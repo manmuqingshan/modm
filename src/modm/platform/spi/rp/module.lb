@@ -48,6 +48,7 @@ def prepare(module, options):
 
     module.depends(
         ":architecture:spi",
+        ":architecture:assert",
         ":cmsis:device",
         ":math:algorithm",
         ":platform:gpio",
