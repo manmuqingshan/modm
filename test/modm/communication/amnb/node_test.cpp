@@ -36,7 +36,7 @@ AmnbNodeTest::testBroadcast()
 	{
 		node.broadcast(0x10);
 		node.broadcast(0x20, uint32_t(0x03020100));
-		node.update(); node.update();
+		node.update_transmit(); node.update_receive(); node.update_transmit(); node.update_receive();
 		const uint8_t raw[] = {0x7E, 0x7E, 84, 0x08, 0x10, 0, 0x7E, 0x7E, 58, 0x08, 0x20, 4, 0, 1, 2, 3};
 		TEST_ASSERT_EQUALS(SharedMedium::raw_transmitted.size(), sizeof(raw));
 		TEST_ASSERT_EQUALS_ARRAY(SharedMedium::transmitted, raw, sizeof(raw));
@@ -46,7 +46,7 @@ AmnbNodeTest::testBroadcast()
 	SharedMedium::fail_tx_index = 2;
 	{
 		node.broadcast(0x70);
-		for(uint32_t ii=0; ii < 20000; ii += 10) { node.update(); micro_clock::setTime(ii); }
+		for(uint32_t ii=0; ii < 20000; ii += 10) { node.update_transmit(); node.update_receive(); micro_clock::setTime(ii); }
 		// first transmission attempt fails
 		const uint8_t raw[] = {0x7E, 0x7E, 110, 0x7E, 0x7E, 110, 0x08, 0x70, 0};
 		TEST_ASSERT_EQUALS(SharedMedium::raw_transmitted.size(), sizeof(raw));
@@ -65,7 +65,7 @@ AmnbNodeTest::testRequest()
 		micro_clock::setTime(0); milli_clock::setTime(0);
 		modm::ResumableResult< Result<> > res{0};
 		for(uint32_t ii=0; (res = node.request(0x10, 0x80)).getState() == modm::rf::Running; ii += 10)
-		{ micro_clock::setTime(ii); milli_clock::setTime(ii/1000); node.update(); }
+		{ micro_clock::setTime(ii); milli_clock::setTime(ii/1000); node.update_transmit(); node.update_receive(); }
 
 		TEST_ASSERT_EQUALS(res.getResult().error(), Error::RequestTimeout);
 		TEST_ASSERT_FALSE(bool(res.getResult()));
@@ -79,7 +79,7 @@ AmnbNodeTest::testRequest()
 		micro_clock::setTime(0); milli_clock::setTime(0);
 		modm::ResumableResult< Result<> > res{0};
 		for(uint32_t ii=0; (res = node.request(0x10, 0x80)).getState() == modm::rf::Running; ii += 10)
-		{ micro_clock::setTime(ii); milli_clock::setTime(ii/1000); node.update(); }
+		{ micro_clock::setTime(ii); milli_clock::setTime(ii/1000); node.update_transmit(); node.update_receive(); }
 
 		TEST_ASSERT_EQUALS(res.getResult().error(), Error::ResponseAllocationFailed);
 		TEST_ASSERT_FALSE(bool(res.getResult()));
@@ -94,7 +94,7 @@ AmnbNodeTest::testRequest()
 		micro_clock::setTime(0); milli_clock::setTime(0);
 		modm::ResumableResult< Result<uint8_t, uint8_t> > res{0};
 		for(uint32_t ii=0; (res = node.request<uint8_t, uint8_t>(0x10, 0x80, uint8_t(0x10))).getState() == modm::rf::Running; ii += 10)
-		{ micro_clock::setTime(ii); milli_clock::setTime(ii/1000); node.update(); }
+		{ micro_clock::setTime(ii); milli_clock::setTime(ii/1000); node.update_transmit(); node.update_receive(); }
 
 		TEST_ASSERT_EQUALS(res.getResult().error(), Error::UserError);
 		TEST_ASSERT_FALSE(bool(res.getResult()));
@@ -116,7 +116,7 @@ AmnbNodeTest::testRequest()
 		for(uint32_t ii=0;
 		    (res = node.request<uint32_t>(0x10, 0x80, uint32_t(0x03020100))).getState() == modm::rf::Running;
 		    ii += 10)
-		{ micro_clock::setTime(ii); milli_clock::setTime(ii/1000); node.update(); }
+		{ micro_clock::setTime(ii); milli_clock::setTime(ii/1000); node.update_transmit(); node.update_receive(); }
 
 		TEST_ASSERT_EQUALS(res.getResult().error(), Error::Ok);
 		TEST_ASSERT_TRUE(bool(res.getResult()));
@@ -177,7 +177,7 @@ AmnbNodeTest::testAction()
 	SharedMedium::reset();
 	SharedMedium::add_rx({0x7E, 0x7E, 104, 8, 1, 68, 0, 1, 2, 3});
 	{
-		node.update(); node.update();
+		node.update_transmit(); node.update_receive(); node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 0);
 		const uint8_t raw[] = {0x7E, 0x7E, 237, 8, 1, 97, 2};
 		TEST_ASSERT_EQUALS(SharedMedium::transmitted.size(), sizeof(raw));
@@ -188,7 +188,7 @@ AmnbNodeTest::testAction()
 	SharedMedium::reset();
 	SharedMedium::add_rx({0x7E, 0x7E, 163, 8, 10, 64});
 	{
-		node.update(); node.update();
+		node.update_transmit(); node.update_receive(); node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 0);
 		const uint8_t raw[] = {0x7E, 0x7E, 76, 8, 10, 129, 3};
 		TEST_ASSERT_EQUALS(SharedMedium::transmitted.size(), sizeof(raw));
@@ -200,7 +200,7 @@ AmnbNodeTest::testAction()
 	SharedMedium::reset();
 	SharedMedium::add_rx({0x7E, 0x7E, 227, 8, 1, 64});
 	{
-		node.update(); node.update();
+		node.update_transmit(); node.update_receive(); node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 1);
 		TEST_ASSERT_EQUALS(count, 11);
 		const uint8_t raw[] = {0x7E, 0x7E, 42, 8, 1, 96};
@@ -212,7 +212,7 @@ AmnbNodeTest::testAction()
 	SharedMedium::reset();
 	SharedMedium::add_rx({0x7E, 0x7E, 141, 8, 2, 68, 0, 1, 2, 3});
 	{
-		node.update(); node.update();
+		node.update_transmit(); node.update_receive(); node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 2);
 		TEST_ASSERT_EQUALS(count, 11+21);
 		const uint8_t raw[] = {0x7E, 0x7E, 209, 8, 2, 96};
@@ -224,7 +224,7 @@ AmnbNodeTest::testAction()
 	SharedMedium::reset();
 	SharedMedium::add_rx({0x7E, 0x7E, 46, 8, 3, 68, 0, 1, 2, 3});
 	{
-		node.update(); node.update();
+		node.update_transmit(); node.update_receive(); node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 4);
 		const uint8_t raw[] = {0x7E, 0x7E, 84, 8, 3, 100, 4, 5, 6, 7};
 		TEST_ASSERT_EQUALS(SharedMedium::transmitted.size(), sizeof(raw));
@@ -235,7 +235,7 @@ AmnbNodeTest::testAction()
 	SharedMedium::reset();
 	SharedMedium::add_rx({0x7E, 0x7E, 233, 8, 4, 64});
 	{
-		node.update(); node.update();
+		node.update_transmit(); node.update_receive(); node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 8);
 		const uint8_t raw[] = {0x7E, 0x7E, 94, 8, 4, 161, 3};
 		TEST_ASSERT_EQUALS(SharedMedium::transmitted.size(), sizeof(raw));
@@ -246,7 +246,7 @@ AmnbNodeTest::testAction()
 	SharedMedium::reset();
 	SharedMedium::add_rx({0x7E, 0x7E, 227, 8, 5, 68, 0, 1, 2, 3});
 	{
-		node.update(); node.update();
+		node.update_transmit(); node.update_receive(); node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 16);
 		const uint8_t raw[] = {0x7E, 0x7E, 133, 8, 5, 164, 0xde, 0xc0, 0xad, 0xba};
 		TEST_ASSERT_EQUALS(SharedMedium::transmitted.size(), sizeof(raw));
@@ -291,20 +291,20 @@ AmnbNodeTest::testListener()
 	trig = 0;
 	SharedMedium::add_rx({0x7E, 0x7E, 4, 32, 1, 0});
 	{
-		node.update();
+		node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 1);
 		TEST_ASSERT_EQUALS(count, 11);
-		node.update();
+		node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 1);
 		TEST_ASSERT_EQUALS(count, 11);
 	}
 	trig = 0;
 	SharedMedium::add_rx({0x7E, 0x7E, 102, 16, 2, 4, 0, 1, 2, 3});
 	{
-		node.update();
+		node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 6);
 		TEST_ASSERT_EQUALS(count, 11+21);
-		node.update();
+		node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 6);
 		TEST_ASSERT_EQUALS(count, 11+21);
 	}
@@ -312,10 +312,10 @@ AmnbNodeTest::testListener()
 	SharedMedium::add_rx({0x7E, 0x7E, 4, 32, 1, 0});
 	SharedMedium::add_rx({0x7E, 0x7E, 102, 16, 2, 4, 0, 1, 2, 3});
 	{
-		node.update();
+		node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 1);
 		TEST_ASSERT_EQUALS(count, 11+21+12);
-		node.update();
+		node.update_transmit(); node.update_receive();
 		TEST_ASSERT_EQUALS(trig, 7);
 		TEST_ASSERT_EQUALS(count, 11+21+12+22);
 	}

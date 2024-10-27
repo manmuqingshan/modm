@@ -125,16 +125,8 @@ public:
 	}
 
 public:
-	void
-	update()
-	{
-		transmit();
-		receive();
-	}
-
-protected:
 	modm::ResumableResult<void>
-	transmit()
+	update_transmit()
 	{
 		RF_BEGIN(2);
 		while(1)
@@ -150,6 +142,30 @@ protected:
 		RF_END();
 	}
 
+	modm::ResumableResult<void>
+	update_receive()
+	{
+		RF_BEGIN(5);
+		while(1)
+		{
+			rx_msg.deallocate();	// deallocates previous message
+			if (RF_CALL(interface.receiveHeader(&rx_msg)) == InterfaceStatus::Ok)
+			{
+				// Check lists if we are interested in this message
+				is_rx_msg_for_us = handleRxMessage(false);
+				// Receive the message data, only allocate if it's for us
+				if (RF_CALL(interface.receiveData(&rx_msg, is_rx_msg_for_us)) == InterfaceStatus::Ok)
+				{
+					// Only handle message *with* data if it's for us
+					if (is_rx_msg_for_us) handleRxMessage(true);
+				}
+			}
+			RF_YIELD();
+		}
+		RF_END();
+	}
+
+protected:
 	modm::ResumableResult<void>
 	send(Message &msg)
 	{
@@ -197,29 +213,6 @@ protected:
 			*request_msg.get<Error>() = Error::RequestTimeout;
 		}
 
-		RF_END();
-	}
-
-	modm::ResumableResult<void>
-	receive()
-	{
-		RF_BEGIN(5);
-		while(1)
-		{
-			rx_msg.deallocate();	// deallocates previous message
-			if (RF_CALL(interface.receiveHeader(&rx_msg)) == InterfaceStatus::Ok)
-			{
-				// Check lists if we are interested in this message
-				is_rx_msg_for_us = handleRxMessage(false);
-				// Receive the message data, only allocate if it's for us
-				if (RF_CALL(interface.receiveData(&rx_msg, is_rx_msg_for_us)) == InterfaceStatus::Ok)
-				{
-					// Only handle message *with* data if it's for us
-					if (is_rx_msg_for_us) handleRxMessage(true);
-				}
-			}
-			RF_YIELD();
-		}
 		RF_END();
 	}
 

@@ -137,9 +137,12 @@ main()
 
 	while (true)
 	{
-		node1.update();
-		node2.update();
-		node3.update();
+		node1.update_transmit();
+		node1.update_receive();
+		node2.update_transmit();
+		node2.update_receive();
+		node3.update_transmit();
+		node3.update_receive();
 		thread.update();
 	}
 

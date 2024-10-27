@@ -239,11 +239,16 @@ else if (response.hasUserError())
 else Error error = response.error();
 
 
-/// node.update() must be called as often as possible!
+/// node.update_{transmit, receive}() must be called as often as possible!
 while(true)
 {
-    node.update();
+    node.update_transmit();
+    node.update_receive();
 }
+
+// Alternatively you require one fiber per update function
+modm::Fiber<> fiberNodeTransmit([]{ node.update_transmit(); });
+modm::Fiber<> fiberNodeReceive([]{ node.update_receive(); });
 ```
 
 
