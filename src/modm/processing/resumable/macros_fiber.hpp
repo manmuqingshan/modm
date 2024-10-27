@@ -13,13 +13,24 @@
 #define MODM_RF_MACROS_FIBER_HPP
 
 #include <modm/processing/fiber.hpp>
+#include <modm/processing/fiber/mutex.hpp>
 
 /// @ingroup modm_processing_resumable
 /// @{
 
+#ifdef __DOXYGEN__
 /// Declare start of resumable function with index.
 /// @warning Use at start of the `resumable()` implementation!
-#define RF_BEGIN(...)
+#define RF_BEGIN(index)
+
+/**
+ * Declare start of a nested resumable function.
+ * This will immediately return if the nesting is too deep.
+ *
+ * @warning Use at start of the `resumable()` implementation!
+ */
+#define RF_BEGIN()
+#endif
 
 
 /**
@@ -93,5 +104,21 @@
 	return __VA_ARGS__
 
 /// @}
+
+#ifndef __DOXYGEN__
+
+#define RF_BEGIN_0() \
+	this->template checkRfType<true>(); \
+	modm::fiber::lock_guard rfLockGuardState{this->rfState};
+
+#define RF_BEGIN_1(index) \
+	this->template checkRfType<false>(); \
+	this->template checkRfFunctions<index>(); \
+	modm::fiber::lock_guard rfLockGuardState{this->rfStateArray[index]};
+
+#define MODM_RF_GET_MACRO(_0, _1, NAME, ...) NAME
+#define RF_BEGIN(...) MODM_RF_GET_MACRO(_0 __VA_OPT__(,) __VA_ARGS__, RF_BEGIN_1, RF_BEGIN_0)(__VA_ARGS__)
+
+#endif
 
 #endif // MODM_RF_MACROS_FIBER_HPP
