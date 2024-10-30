@@ -48,6 +48,16 @@ modm::platform::SocketCan::open(std::string deviceName)
 		return false;
 	}
 
+	/* Enable FDCAN support */
+	int recv_can_fd = 1;
+	if (setsockopt(skt, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &recv_can_fd, sizeof(recv_can_fd)) < 0)
+	{
+		MODM_LOG_ERROR << MODM_FILE_INFO;
+		MODM_LOG_ERROR << "Failed to enable FDCAN support: " << strerror(errno) << modm::endl;
+		close();
+		return false;
+	}
+
 	/* Locate the interface you wish to use */
 	struct ifreq ifr{};
 	if (deviceName.empty() || deviceName.size() > IFNAMSIZ - 1) {
@@ -104,8 +114,8 @@ modm::platform::SocketCan::getBusState()
 bool
 modm::platform::SocketCan::isMessageAvailable()
 {
-	struct can_frame frame;
-	int nbytes = recv(skt, &frame, sizeof(struct can_frame), MSG_DONTWAIT | MSG_PEEK);
+	struct canfd_frame frame;
+	int nbytes = recv(skt, &frame, sizeof(struct canfd_frame), MSG_DONTWAIT | MSG_PEEK);
 
 	// recv returns 'Resource temporary not available' which is wired but ignored here.
 	/* if (nbytes < 0)
@@ -120,11 +130,17 @@ modm::platform::SocketCan::isMessageAvailable()
 bool
 modm::platform::SocketCan::getMessage(can::Message& message)
 {
-	struct can_frame frame;
-	int nbytes = recv(skt, &frame, sizeof(struct can_frame), MSG_DONTWAIT);
+	struct canfd_frame frame;
+	int nbytes = recv(skt, &frame, sizeof(frame), MSG_DONTWAIT);
 
 	if (nbytes > 0)
 	{
+		if (frame.len > modm::can::Message::capacity)
+		{
+			MODM_LOG_ERROR << MODM_FILE_INFO;
+			MODM_LOG_ERROR << "Received can frame too big for configured buffer." << modm::endl;
+			return false;
+		}
 		message.identifier = frame.can_id;
 		message.setLength(frame.len);
 		message.setExtended(frame.can_id & CAN_EFF_FLAG);
@@ -140,8 +156,9 @@ modm::platform::SocketCan::getMessage(can::Message& message)
 bool
 modm::platform::SocketCan::sendMessage(const can::Message& message)
 {
-	struct can_frame frame;
+	struct canfd_frame frame;
 
+	frame.flags = 0;
 	frame.can_id = message.identifier;
 	if (message.isExtended()) {
 		frame.can_id |= CAN_EFF_FLAG;
@@ -156,7 +173,11 @@ modm::platform::SocketCan::sendMessage(const can::Message& message)
 		frame.data[ii] = message.data[ii];
 	}
 
-	int bytes_sent = write( skt, &frame, sizeof(frame) );
+	// Send can_frame when length < 8, since other applications may not accept
+	// canfd_frame. Both structs intentionally share the same layout
+	// for this purpose
+	int size = message.getLength() > 8 ? sizeof(canfd_frame) : sizeof(can_frame);
+	int bytes_sent = write(skt, &frame, size);
 
 	return (bytes_sent > 0);
 }
