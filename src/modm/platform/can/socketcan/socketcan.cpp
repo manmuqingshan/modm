@@ -3,6 +3,7 @@
  * Copyright (c) 2017, Fabian Greif
  * Copyright (c) 2017, Niklas Hauser
  * Copyright (c) 2023, Christopher Durand
+ * Copyright (c) 2024, Michael Jossen
  *
  * This file is part of the modm project.
  *
@@ -125,10 +126,10 @@ modm::platform::SocketCan::getMessage(can::Message& message)
 	if (nbytes > 0)
 	{
 		message.identifier = frame.can_id;
-		message.setDataLengthCode(frame.can_dlc);
+		message.setLength(frame.len);
 		message.setExtended(frame.can_id & CAN_EFF_FLAG);
 		message.setRemoteTransmitRequest(frame.can_id & CAN_RTR_FLAG);
-		for (uint8_t ii = 0; ii < frame.can_dlc; ++ii) {
+		for (uint8_t ii = 0; ii < frame.len; ++ii) {
 			message.data[ii] = frame.data[ii];
 		}
 		return true;
@@ -149,7 +150,7 @@ modm::platform::SocketCan::sendMessage(const can::Message& message)
 		frame.can_id |= CAN_RTR_FLAG;
 	}
 
-	frame.can_dlc = message.getLength();
+	frame.len = message.getLength();
 
 	for (uint8_t ii = 0; ii < message.getLength(); ++ii) {
 		frame.data[ii] = message.data[ii];
