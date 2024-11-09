@@ -82,12 +82,12 @@ modm_context_entry()
 {
 	asm volatile
 	(
-		"ldr r0, [sp]		\n\t"	// Load closure data pointer
 %% if is_cm0
+		"ldr r0, [sp]		\n\t"	// Load closure data pointer
 		"ldr r1, [sp, #4]	\n\t"	// Load closure function pointer
-		"mov pc, r1			\n\t"	// Jump to closure function
+		"bx r1				\n\t"	// Jump to closure function
 %% else
-		"ldr pc, [sp, #4]	\n\t"	// Jump to closure function
+		"ldm sp, {r0, pc}	\n\t"	// Load data pointer and jump to closure
 %% endif
 	);
 }
@@ -139,12 +139,6 @@ modm_context_stack_usage(const modm_context_t *ctx)
 	return 0;
 }
 
-bool
-modm_context_stack_overflow(const modm_context_t *ctx)
-{
-	return *ctx->bottom != StackWatermark;
-}
-
 #define MODM_PUSH_CONTEXT() \
 %% if is_cm0
 		"push {r4-r7, lr}	\n\t" \
@@ -173,7 +167,7 @@ modm_context_stack_overflow(const modm_context_t *ctx)
 		"pop {r4-r11, pc}	\n\t"
 %% endif
 %#
-void modm_naked
+uintptr_t modm_naked
 modm_context_start(modm_context_t*)
 {
 	asm volatile
@@ -211,42 +205,91 @@ modm_context_jump(modm_context_t*, modm_context_t*)
 	(
 		MODM_PUSH_CONTEXT()
 %#
+%% if not with_psplim
+		"ldr r3, [r0, #4]		\n\t"	// Load from->bottom
+%% endif
 %% if is_cm0
-		"mov r2,  sp		\n\t"
-		"str r2, [r0]		\n\t"	// Store the SP in from->sp
+		"mov r2,  sp			\n\t"
+		"str r2, [r0]			\n\t"	// Store the SP in from->sp
+%#
+		"cmp r2, r3				\n\t"	// Compare SP to from->bottom
 %% else
-		"str sp, [r0]		\n\t"	// Store the SP in from->sp
+		"str sp, [r0]			\n\t"	// Store the SP in from->sp
+%% if not with_psplim
+%#
+		"cmp sp, r3				\n\t"	// Compare SP to from->bottom
+%% endif
+%% endif
+%% if not with_psplim
+		"bls 1f					\n\t"	// If SP <= bottom, stack overflow
+
+		"ldr r3, [r3]			\n\t"	// Load stack bottom
+		"ldr r2, =%0			\n\t"	// Load StackWatermark value
+		"cmp r2, r3				\n\t"	// Check if stack watermark is still at the bottom
+		"bne 1f					\n\t"	// If not, stack overflow
 %% endif
 %#
 %% if is_cm0
-		"ldr r2, [r1]		\n\t"
-		"mov sp,  r2		\n\t"	// Restore SP from to->sp
+		"ldr r2, [r1]			\n\t"
+		"mov sp,  r2			\n\t"	// Restore SP from to->sp
 %% elif with_psplim
-		"ldm r1, {r1-r2}	\n\t"
-		"msr psplim, r2		\n\t"	// Set PSPLIM to ctx->bottom
-		"mov sp, r1			\n\t"	// Set PSP to ctx->sp
+		"ldm r1, {r1-r2}		\n\t"
+		"msr psplim, r2			\n\t"	// Set PSPLIM to ctx->bottom
+		"mov sp, r1				\n\t"	// Set PSP to ctx->sp
 %% else
-		"ldr sp, [r1]		\n\t"	// Restore SP from to->sp
+		"ldr sp, [r1]			\n\t"	// Restore SP from to->sp
 %% endif
 %#
 		MODM_POP_CONTEXT()
+
+	"1:  b modm_context_end	\n\t"
+%% if not with_psplim
+		:: "i" (StackWatermark)
+%% endif
 	);
 }
 
 void modm_naked
-modm_context_end()
+modm_context_end(uintptr_t)
 {
 	asm volatile
 	(
-		"mrs r0, control	\n\t"
+		"mrs r1, control	\n\t"
 %% if is_cm0
-		"mov r1, #2			\n\t"
-		"bic r0, r0, r1		\n\t"	// Unset SPSEL
+		"mov r2, #2			\n\t"
+		"bic r1, r1, r2		\n\t"	// Unset SPSEL
 %% else
-		"bic r0, r0, #2		\n\t"	// Unset SPSEL
+		"bic r1, r1, #2		\n\t"	// Unset SPSEL
 %% endif
-		"msr control, r0	\n\t"
+		"msr control, r1	\n\t"
 
 		MODM_POP_CONTEXT()
 	);
 }
+
+%% if with_psplim
+#include <modm/processing/fiber/functions.hpp>
+#include <modm/platform.hpp>
+
+void modm_context_stkof_init()
+{
+	// Enable the UsageFault handler
+	SCB->SHCSR |= SCB_SHCSR_USGFAULTENA_Msk;
+}
+MODM_HARDWARE_INIT(modm_context_stkof_init);
+
+// On fiber stack overflow this handler will be called
+extern "C" void
+UsageFault_Handler()
+{
+	// check if the fault is a stack overflow *from the fiber stack*
+	if (SCB->CFSR & SCB_CFSR_STKOF_Msk and __get_PSP() == __get_PSPLIM())
+	{
+		// lower the priority of the usage fault to allow the UART interrupts to work
+		NVIC_SetPriority(UsageFault_IRQn, (1ul << __NVIC_PRIO_BITS) - 1ul);
+		// raise an assertion to report this overflow
+		modm_assert(false, "fbr.stkof", "Fiber stack overflow", modm::this_fiber::get_id());
+	}
+	else HardFault_Handler();
+}
+%% endif

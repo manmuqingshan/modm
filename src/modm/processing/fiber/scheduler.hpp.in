@@ -15,6 +15,7 @@
 #define MODM_FIBER_SCHEDULER_HPP
 
 #include "task.hpp"
+#include <modm/architecture/interface/assert.hpp>
 %% if multicore
 #include <modm/platform/core/multicore.hpp>
 %% endif
@@ -109,7 +110,10 @@ protected:
 	{
 		if (current == nullptr) return;
 		Task* next = current->next;
-		if (next == current) return;
+		// If there's only one fiber running, we could just return here.
+		// However, we need to check the stack for overflow.
+		// We do that by running the context switch!
+		// if (next == current) return;
 		last = current;
 		jump(next);
 	}
@@ -123,7 +127,7 @@ protected:
 		if (empty())
 		{
 			current = nullptr;
-			modm_context_end();
+			modm_context_end(0);
 		}
 		jump(next);
 		__builtin_unreachable();
@@ -147,7 +151,12 @@ protected:
 	{
 		if (empty()) return false;
 		current = last->next;
+%% if with_psplim
 		modm_context_start(&current->ctx);
+%% else
+		const auto overflow = (Task *) modm_context_start(&current->ctx);
+		modm_assert(not overflow, "fbr.stkof", "Fiber stack overflow", overflow);
+%% endif
 		return true;
 	}
 

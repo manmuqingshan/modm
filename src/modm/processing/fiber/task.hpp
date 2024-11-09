@@ -142,14 +142,6 @@ public:
 		return modm_context_stack_usage(&ctx);
 	}
 
-	/// @returns if the bottom word on the stack has been overwritten.
-	/// @see `modm_context_stack_overflow()`.
-	[[nodiscard]] bool inline
-	stack_overflow() const
-	{
-		return modm_context_stack_overflow(&ctx);
-	}
-
 	/// Adds the task to the currently active scheduler, if not already running.
 	/// @returns if the fiber has been scheduled.
 	bool

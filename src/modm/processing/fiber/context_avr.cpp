@@ -146,20 +146,53 @@ modm_context_stack_usage(const modm_context_t *ctx)
 	return 0;
 }
 
-bool
-modm_context_stack_overflow(const modm_context_t *ctx)
-{
-	return *p2u(ctx->bottom) != StackWatermark;
-}
-
-// Stores only the stack pointer of the main stack
+extern "C" uintptr_t modm_context_jump_entry(modm_context_t*, modm_context_t*);
+extern "C" void modm_context_jump_return(uintptr_t, modm_context_t*);
 static uintptr_t main_context_sp;
-static_assert(offsetof(modm_context_t, sp) == 0);
 
-void
+uintptr_t
 modm_context_start(modm_context_t *to)
 {
-	modm_context_jump((modm_context_t*)&main_context_sp, to);
+	return modm_context_jump_entry((modm_context_t*)&main_context_sp, to);
+}
+
+void
+modm_context_end(uintptr_t retval)
+{
+	modm_context_jump_return(retval, (modm_context_t*)&main_context_sp);
+	__builtin_unreachable();
+}
+
+#define MODM_PUSH_CONTEXT() \
+		".irp regs, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,29	\n\t" \
+		"push r\\regs 					\n\t" \
+		".endr 							\n\t"
+
+#define MODM_POP_CONTEXT() \
+		".irp regs, 29,28,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2	\n\t" \
+		"pop r\\regs			\n\t" \
+		".endr					\n\t"
+
+static_assert(offsetof(modm_context_t, sp) == 0);
+static_assert(offsetof(modm_context_t, bottom) == 2);
+
+uintptr_t modm_naked
+modm_context_jump_entry(modm_context_t*, modm_context_t*)
+{
+	asm volatile
+	(
+		MODM_PUSH_CONTEXT()
+
+		// Store the SP of current fiber
+		"mov ZL, r24					\n\t"
+		"mov ZH, r25					\n\t"
+		"in	YL, __SP_L__				\n\t"
+		"in	YH, __SP_H__				\n\t"
+		"std Z+0, YL					\n\t"
+		"std Z+1, YH					\n\t"
+
+		"jmp modm_context_jump_return	\n\t"
+	);
 }
 
 void modm_naked
@@ -167,49 +200,54 @@ modm_context_jump(modm_context_t*, modm_context_t*)
 {
 	asm volatile
 	(
-		// Push callee-saved registers on stack
-		".irp regs, 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,29	\n\t"
-		"push r\\regs 		\n\t"
-		".endr 				\n\t"
+		MODM_PUSH_CONTEXT()
 
 		// Store the SP of current fiber
-		"mov ZL, r24		\n\t"
-		"mov ZH, r25		\n\t"
-		"in	r24, __SP_L__	\n\t"
-		"in	r25, __SP_H__	\n\t"
-		"st  Z+, r24		\n\t"
-		"st  Z,  r25		\n\t"
+		"mov ZL, r24			\n\t"
+		"mov ZH, r25			\n\t"
+		"in	YL, __SP_L__		\n\t"
+		"in	YH, __SP_H__		\n\t"
+		"std Z+0, YL			\n\t"
+		"std Z+1, YH			\n\t"
+
+		// Check for stack overflow via sp < from->bottom
+		"ldd XL, Z+2			\n\t"
+		"ldd XH, Z+3			\n\t"
+		"cp  YL, XL				\n\t"
+		"cpc YH, XH				\n\t"
+		"brlo 1f				\n\t"
+
+		// Check for stack overflow via *from->bottom != watermark
+		"ld r20, X				\n\t"
+		"cpi r20, %0			\n\t"
+		"brne 1f				\n\t"
+
+		// r24:r25 is unmodified, thus can be used to pass a return value
+	"modm_context_jump_return:	\n\t"
 
 		// Load the SP of next fiber
-		"mov ZL, r22		\n\t"
-		"mov ZH, r23		\n\t"
-		"ld  r22, Z+		\n\t"
-		"ld  r23, Z			\n\t"
+		"mov ZL, r22			\n\t"
+		"mov ZH, r23			\n\t"
+		"ldd r22, Z+0			\n\t"
+		"ldd r23, Z+1			\n\t"
 
 		// Save SREG and disable interrupts
-		"in r24, __SREG__	\n\t"
-		"cli				\n\t"
+		"in r20, __SREG__		\n\t"
+		"cli					\n\t"
 
 		// Write the SP
-		"out __SP_L__, r22	\n\t"
-		"out __SP_H__, r23	\n\t"
+		"out __SP_L__, r22		\n\t"
+		"out __SP_H__, r23		\n\t"
 
 		// Re-enable interrupts by restoring SREG
-		"out __SREG__, r24	\n\t"
+		"out __SREG__, r20		\n\t"
 
-		// Pop callee-saved registers from stack
-		".irp regs, 29,28,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2	\n\t"
-		"pop r\\regs		\n\t"
-		".endr				\n\t"
+		MODM_POP_CONTEXT()
 
-		"ret				\n\t"
+		"ret					\n\t"
+
+	"1:  jmp modm_context_end	\n\t"
+
+		:: "i" (StackWatermark)
 	);
-}
-
-void
-modm_context_end()
-{
-	uintptr_t dummy;
-	modm_context_jump((modm_context_t*)&dummy, (modm_context_t*)&main_context_sp);
-	__builtin_unreachable();
 }

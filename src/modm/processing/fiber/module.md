@@ -248,20 +248,9 @@ Counts are implemented as 16-bits.
 
 ## Stack Usage
 
-It is difficult to measure stack usage without hardware support, however,
-detecting stack overflows is simpler with watermarking. A single word at the
-bottom of the stack is watermarked by default, as a cheap way to detect stack
-overflows:
-
-```cpp
-// check if the bottom word of the stack was written
-bool overflowed = fiber.stack_overflow();
-```
-
-Since the stack can also overflow without writing the last word, it is better to
-measure maximum stack usage and size the stack with a healthy buffer. You must
-watermark the stack *before* running the fiber, then you may query the stack
-usage inside or outside the fiber:
+To measure the stack usage of a fiber, you need to explicitly watermark the
+stack *before* running the fiber, then you may query the stack usage inside or
+outside the fiber:
 
 ```cpp
 // You must watermark the stack *before* running the fiber!
@@ -276,37 +265,15 @@ Note that stack usage measurement through watermarking can be inaccurate if the
 registers contain the watermark value.
 
 
-### ARMv8-M Stack Limit Registers
+## Stack Overflow
 
-On ARMv8-M devices, the PSPLIM register is set to the bottom of the fiber stack
-so that stack overflows are reliably detected and cause a STKOF UsageFault if
-enabled, or a HardFault if not, both on the main stack.
+Each context switch checks if the stack overflowed, in which case the scheduler
+will abandon execution and trigger an assertion on the main stack with the
+identifier `fbr.stkof` and the fiber pointer as context. Note that the assertion
+is executed on the main stack and not on the fiber stack that overflowed!
 
-Currently no recovery strategy is implementable, since accessing the scheduler
-is not interrupt-safe and any acquired resources of the offending fiber are not
-tracked and can thus also not be released. Therefore, no default implementation
-to handle the UsageFault is provided.
-
-Here is an example handler if you wish to experiment with solutions:
-
-```cpp
-// Enable the UsageFault handler *before* modm::fiber::Scheduler::run();
-SCB->SHCSR |= SCB_SHCSR_USGFAULTENA_Msk;
-
-// On fiber stack overflow this handler will be called
-extern "C" void UsageFault_Handler()
-{
-	// check if the fault is a stack overflow *from the fiber stack*
-	if (SCB->CFSR & SCB_CFSR_STKOF_Msk and __get_PSP() == __get_PSPLIM())
-	{
-		// lower the priority of the usage fault to allow the UART interrupts to work
-		NVIC_SetPriority(UsageFault_IRQn, (1ul << __NVIC_PRIO_BITS) - 1ul);
-		// raise an assertion to report this overflow
-		modm_assert(false, "fbr.stkof", "Fiber stack overflow", modm::this_fiber::get_id());
-	}
-	else HardFault_Handler();
-}
-```
+On ARMv8-M devices, the stack overflow is checked in hardware via the PSPLIM
+register, therefore the context switch is a little faster.
 
 
 ## Scheduling
@@ -341,11 +308,14 @@ switching to a new stack and restoring callee registers from this stack.
 The static `modm::this_fiber::yield()` function wraps this functionality in a
 transparent way.
 
+
 ### AVR
 
 On AVRs the fiber stack is shared with the currently active interrupt.
 This requires the fiber stack size to include the worst case stack size of all
 interrupts. Fortunately on AVRs interrupts cannot be nested.
+
+Therefore the default stack size is a fairly large **512B**.
 
 
 ### Arm Cortex-M
@@ -355,6 +325,15 @@ calling `modm::fiber::Scheduler::run()` the PSP is used as a Fiber stack
 pointer in Thread mode. Therefore all interrupts are using the main stack whose
 size is defined by the `modm:platform:cortex-m:main_stack_size` option and will
 not increase the fiber stack size at all.
+
+The default stack size is **1KiB**.
+
+
+### Hosted
+
+Two implementations for x86_64 and ARM64 are provided.
+
+The default stack size is **1MiB**.
 
 
 ### Multi-Core Scheduling

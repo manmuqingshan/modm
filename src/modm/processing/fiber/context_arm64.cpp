@@ -57,16 +57,16 @@ constexpr uintptr_t StackWatermark = 0xc0ffee'f00d'facade;
 
 }
 
-extern "C" void modm_context_entry() asm("modm_context_entry");
+uintptr_t modm_context_jump_entry(modm_context_t *from, modm_context_t *to) asm("modm_context_jump_entry");
+void modm_context_jump_return(uintptr_t, modm_context_t*) asm("modm_context_jump_return");
+void modm_context_entry() asm("modm_context_entry");
 asm
 (
-	".globl modm_context_entry	\n\t"
-	"modm_context_entry:		\n\t"
-	"ldr x0, [sp]				\n\t" // Load closure data pointer
-	"ldr x1, [sp, #8]			\n\t" // Load closure function
-	"br x1						\n\t" // Jump to closure function
+".globl modm_context_entry	\n\t"
+"modm_context_entry:		\n\t"
+	"ldp x0, x1, [sp]		\n\t" // Load closure data pointer and function
+	"br x1					\n\t" // Jump to closure function
 );
-
 
 void
 modm_context_init(modm_context_t *ctx,
@@ -113,26 +113,28 @@ modm_context_stack_usage(const modm_context_t *ctx)
 	return 0;
 }
 
-bool
-modm_context_stack_overflow(const modm_context_t *ctx)
-{
-	return *ctx->bottom != StackWatermark;
-}
-
 static modm_context_t main_context;
 
-void
+uintptr_t
 modm_context_start(modm_context_t *to)
 {
-	modm_context_jump(&main_context, to);
+	return modm_context_jump_entry(&main_context, to);
 }
 
 void
-modm_context_end()
+modm_context_end(uintptr_t retval)
 {
-	modm_context_t dummy;
-	modm_context_jump(&dummy, &main_context);
+	modm_context_jump_return(retval, &main_context);
 	__builtin_unreachable();
+}
+
+void
+modm_context_jump(modm_context_t *from, modm_context_t *to)
+{
+	register uintptr_t* sp asm("sp");
+	if ((sp - StackWordsRegisters) < from->bottom or *from->bottom != StackWatermark)
+		modm_context_end((uintptr_t) from);
+	modm_context_jump_entry(from, to);
 }
 
 /*
@@ -151,50 +153,53 @@ See https://github.com/boostorg/context/tree/develop/src/asm
 
 asm
 (
-	".globl modm_context_jump	\n\t"
-	"modm_context_jump:			\n\t"
+".global modm_context_jump_entry	\n\t"
+"modm_context_jump_entry:			\n\t"
 
 	/* move stack pointer down */
-	"sub sp,  sp,  #0xa0		\n\t"
+	"sub sp,  sp,  #0xa0			\n\t"
 
 	/* save d8 - d15 */
-	"stp d8,  d9,  [sp, #0x00]	\n\t"
-	"stp d10, d11, [sp, #0x10]	\n\t"
-	"stp d12, d13, [sp, #0x20]	\n\t"
-	"stp d14, d15, [sp, #0x30]	\n\t"
+	"stp d8,  d9,  [sp, #0x00]		\n\t"
+	"stp d10, d11, [sp, #0x10]		\n\t"
+	"stp d12, d13, [sp, #0x20]		\n\t"
+	"stp d14, d15, [sp, #0x30]		\n\t"
 
 	/* save x19-x30 */
-	"stp x19, x20, [sp, #0x40]	\n\t"
-	"stp x21, x22, [sp, #0x50]	\n\t"
-	"stp x23, x24, [sp, #0x60]	\n\t"
-	"stp x25, x26, [sp, #0x70]	\n\t"
-	"stp x27, x28, [sp, #0x80]	\n\t"
-	"stp fp,  lr,  [sp, #0x90]	\n\t"
+	"stp x19, x20, [sp, #0x40]		\n\t"
+	"stp x21, x22, [sp, #0x50]		\n\t"
+	"stp x23, x24, [sp, #0x60]		\n\t"
+	"stp x25, x26, [sp, #0x70]		\n\t"
+	"stp x27, x28, [sp, #0x80]		\n\t"
+	"stp x29, x30, [sp, #0x90]		\n\t"
 
 	/* Store the SP in from->sp */
-	"mov x19, sp				\n\t"
-	"str x19, [x0]				\n\t"
+	"mov x19, sp					\n\t"
+	"str x19, [x0]					\n\t"
+
+".global modm_context_jump_return	\n\t"
+"modm_context_jump_return:			\n\t"
 
 	/* Restore SP from to->sp */
-	"ldr x19, [x1]				\n\t"
-	"mov sp,  x19				\n\t"
+	"ldr x19, [x1]					\n\t"
+	"mov sp,  x19					\n\t"
 
 	/* load d8 - d15 */
-	"ldp d8,  d9,  [sp, #0x00]	\n\t"
-	"ldp d10, d11, [sp, #0x10]	\n\t"
-	"ldp d12, d13, [sp, #0x20]	\n\t"
-	"ldp d14, d15, [sp, #0x30]	\n\t"
+	"ldp d8,  d9,  [sp, #0x00]		\n\t"
+	"ldp d10, d11, [sp, #0x10]		\n\t"
+	"ldp d12, d13, [sp, #0x20]		\n\t"
+	"ldp d14, d15, [sp, #0x30]		\n\t"
 
 	/* load x19-x30 */
-	"ldp x19, x20, [sp, #0x40]	\n\t"
-	"ldp x21, x22, [sp, #0x50]	\n\t"
-	"ldp x23, x24, [sp, #0x60]	\n\t"
-	"ldp x25, x26, [sp, #0x70]	\n\t"
-	"ldp x27, x28, [sp, #0x80]	\n\t"
-	"ldp fp,  lr,  [sp, #0x90]	\n\t"
+	"ldp x19, x20, [sp, #0x40]		\n\t"
+	"ldp x21, x22, [sp, #0x50]		\n\t"
+	"ldp x23, x24, [sp, #0x60]		\n\t"
+	"ldp x25, x26, [sp, #0x70]		\n\t"
+	"ldp x27, x28, [sp, #0x80]		\n\t"
+	"ldp x29, x30, [sp, #0x90]		\n\t"
 
 	/* restore stack from GP + FPU */
-	"add sp,  sp,  #0xa0		\n\t"
+	"add sp,  sp,  #0xa0			\n\t"
 
-	"ret						\n\t"
+	"ret							\n\t"
 );
