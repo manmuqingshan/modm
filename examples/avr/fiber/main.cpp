@@ -68,10 +68,10 @@ main()
 	MODM_LOG_INFO << "Starting fiber modm::yield benchmark..." << modm::endl;
 	MODM_LOG_INFO.flush();
 
-	fiber1.watermark_stack();
-	fiber2.watermark_stack();
-	fiber3.watermark_stack();
-	fiber4.watermark_stack();
+	fiber1.stack_watermark();
+	fiber2.stack_watermark();
+	fiber3.stack_watermark();
+	fiber4.stack_watermark();
 
 	const modm::PreciseTimestamp start = modm::PreciseClock::now();
 	modm::fiber::Scheduler::run();

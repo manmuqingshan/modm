@@ -127,11 +127,11 @@ public:
 
 
 	/// Watermarks the stack to measure `stack_usage()` later.
-	/// @see `modm_context_watermark()`.
+	/// @see `modm_context_stack_watermark()`.
 	void inline
-	watermark_stack()
+	stack_watermark()
 	{
-		modm_context_watermark(&ctx);
+		modm_context_stack_watermark(&ctx);
 	}
 
 	/// @returns the stack usage as measured by a watermark level.
@@ -161,6 +161,12 @@ public:
 	{
 		return scheduler;
 	}
+
+	/// @cond
+	// DEPRECATE: 2025q4
+	[[deprecated("Use `stack_watermark()` instead!")]]
+	void inline watermark_stack() { stack_watermark(); }
+	/// @endcond
 };
 
 }	// namespace modm::fiber

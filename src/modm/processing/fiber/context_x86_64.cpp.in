@@ -97,7 +97,7 @@ modm_context_reset(modm_context_t *ctx)
 }
 
 void
-modm_context_watermark(modm_context_t *ctx)
+modm_context_stack_watermark(modm_context_t *ctx)
 {
 	// clear the register file on the stack
 	for (auto *word = ctx->top - StackWordsAll;

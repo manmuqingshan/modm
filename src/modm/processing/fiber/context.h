@@ -88,12 +88,12 @@ modm_context_end();
  * *NOT* while the fiber is running!
  */
 void
-modm_context_watermark(modm_context_t *ctx);
+modm_context_stack_watermark(modm_context_t *ctx);
 
 /**
  * Returns the stack usage by searching from the bottom of the stack for the
  * watermark level. You may call this function at any point after calling
- * `modm_context_watermark()`.
+ * `modm_context_stack_watermark()`.
  */
 size_t
 modm_context_stack_usage(const modm_context_t *ctx);

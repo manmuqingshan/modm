@@ -265,7 +265,7 @@ usage inside or outside the fiber:
 
 ```cpp
 // You must watermark the stack *before* running the fiber!
-fiber1.watermark_stack();
+fiber1.stack_watermark();
 // now you can run the fibers via the scheduler
 modm::fiber::Scheduler::run();
 // can be called from inside or outside the fiber, before or after running!

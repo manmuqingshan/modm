@@ -90,8 +90,8 @@ main()
 	MODM_LOG_INFO << "Starting fiber modm::yield benchmark..." << modm::endl;
 	MODM_LOG_INFO.flush();
 
-	fiber_y1.watermark_stack();
-	fiber_y2.watermark_stack();
+	fiber_y1.stack_watermark();
+	fiber_y2.stack_watermark();
 	// fiber_y1, fiber_y2 were autostarted
 	{
 		modm::atomic::Lock l;
@@ -103,10 +103,10 @@ main()
 	MODM_LOG_INFO.flush();
 
 	// the rest is manually started
-	fiber1.start(); fiber1.watermark_stack();
-	fiber2.start(); fiber2.watermark_stack();
-	fiber3.start(); fiber3.watermark_stack();
-	fiber4.start(); fiber4.watermark_stack();
+	fiber1.start(); fiber1.stack_watermark();
+	fiber2.start(); fiber2.stack_watermark();
+	fiber3.start(); fiber3.stack_watermark();
+	fiber4.start(); fiber4.stack_watermark();
 	const modm::PreciseTimestamp start = modm::PreciseClock::now();
 	modm::fiber::Scheduler::run();
 	const auto diff = (modm::PreciseClock::now() - start);
@@ -125,8 +125,8 @@ main()
 	MODM_LOG_INFO << "F3 stack usage = " << fiber3.stack_usage() << modm::endl;
 	MODM_LOG_INFO << "F4 stack usage = " << fiber4.stack_usage() << modm::endl;
 
-	fiber_ping.watermark_stack();
-	fiber_pong.watermark_stack();
+	fiber_ping.stack_watermark();
+	fiber_pong.stack_watermark();
 	fiber_ping.start();
 	modm::fiber::Scheduler::run();
 
