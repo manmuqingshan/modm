@@ -60,6 +60,15 @@ It is strongly recommended to only read/write registers in this function, and
 perhaps even write this function in Assembly if deemed necessary.
 
 
+### Cache Initialization
+
+For Cortex-M7 devices, both the I-Cache and D-Cache are enabled by default with
+a write-through policy to significantly improve performance. However, it is
+important to note that manual invalidation of the caches is required on certain
+operations, such as when writing to Flash (I-Cache) or when using DMA
+(D-Cache). See the [CMSIS-Core documentation][cache_api] for more info.
+
+
 ### Additional Initialization
 
 A few modules need to initialize additional hardware during booting. For
@@ -344,3 +353,4 @@ In addition, these linker options are added:
 
 [options]: https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
 [gcc_math]: https://gcc.gnu.org/wiki/FloatingPointMath
+[cache_api]: https://www.keil.com/pack/doc/CMSIS_Dev/Core/html/group__cache__functions__m7.html

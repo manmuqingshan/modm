@@ -99,7 +99,11 @@ void __modm_startup(void)
 
 %% if "m7" in core
 	// Enable instruction cache
+	SCB_InvalidateICache();
 	SCB_EnableICache();
+	// Enable data cache with write-through policy
+	SCB_InvalidateDCache();
+	SCB_EnableDCache();
 %% endif
 
 %% if core != "cortex-m0"
