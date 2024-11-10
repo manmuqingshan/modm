@@ -97,11 +97,11 @@ protected:
 	}
 
 	void inline
-	jump(Task& other)
+	jump(Task* other)
 	{
 		auto from = current;
-		current = &other;
-		modm_context_jump(&from->ctx, &other.ctx);
+		current = other;
+		modm_context_jump(&from->ctx, &other->ctx);
 	}
 
 	void inline
@@ -111,7 +111,7 @@ protected:
 		Task* next = current->next;
 		if (next == current) return;
 		last = current;
-		jump(*next);
+		jump(next);
 	}
 
 	[[noreturn]]
@@ -125,21 +125,21 @@ protected:
 			current = nullptr;
 			modm_context_end();
 		}
-		jump(*next);
+		jump(next);
 		__builtin_unreachable();
 	}
 
 	void inline
-	add(Task& task)
+	add(Task* task)
 	{
-		task.scheduler = this;
+		task->scheduler = this;
 		if (last == nullptr)
 		{
-			task.next = &task;
-			last = &task;
+			task->next = task;
+			last = task;
 			return;
 		}
-		runLast(&task);
+		runLast(task);
 	}
 
 	bool inline
