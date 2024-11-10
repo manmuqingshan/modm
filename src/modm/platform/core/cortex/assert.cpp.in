@@ -16,6 +16,7 @@
 #include <modm/debug/logger.hpp>
 %% elif core.startswith("avr")
 #include <avr/pgmspace.h>
+#include <avr/wdt.h>
 %% else
 #include <modm/platform/device.hpp>
 %% endif
@@ -77,6 +78,7 @@ modm_assert_report(_modm_assertion_info *cinfo)
 %% if core.startswith("cortex-m")
 		NVIC_SystemReset();
 %% elif core.startswith("avr")
+		wdt_enable(WDTO_15MS);
 		while(1) ;
 %% else
 		abort();
