@@ -22,20 +22,20 @@ main()
 	modm::PeriodicTimer heartbeat(1s);
 
 	// <option name="modm:io:with_long_long">yes</option>
-	serialStream << 32ull << modm::endl;
+	MODM_LOG_INFO << 32ull << modm::endl;
 
 	// <option name="modm:io:with_float">yes</option>
-	serialStream << 32.0f << modm::endl;
+	MODM_LOG_INFO << 32.0f << modm::endl;
 
 	// <option name="modm:io:with_printf">yes</option>
-	serialStream.printf("hello %lu %03.3f\n", 32ul, 32.23451);
+	MODM_LOG_INFO.printf("hello %lu %03.3f\n", 32ul, 32.23451);
 
 	uint8_t counter{0};
 	while (true)
 	{
 		if (heartbeat.execute())
 		{
-			serialStream << counter++ << modm::endl;
+			MODM_LOG_INFO << counter++ << modm::endl;
 			Board::LedD13::toggle();
 		}
 	}

@@ -54,8 +54,8 @@ main()
 							  << modm::endl;
 			} else
 			{
-				serialStream << "readDataBlocking(): Error: " << uint8_t(I2cMaster::getErrorState())
-							 << modm::endl;
+				MODM_LOG_INFO << "readDataBlocking(): Error: " << uint8_t(I2cMaster::getErrorState())
+							  << modm::endl;
 			}
 		}
 	}

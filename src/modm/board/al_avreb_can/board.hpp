@@ -18,7 +18,9 @@
 #define MODM_AL_AVREB_CAN_HPP
 
 #include <modm/platform.hpp>
-#include <modm/io/iostream.hpp>
+#include <modm/debug/logger.hpp>
+/// @ingroup modm_board_al_avreb_can
+#define MODM_BOARD_HAS_LOGGER
 
 using namespace modm::platform;
 
@@ -54,6 +56,5 @@ initialize()
 }
 
 using namespace Board;
-extern modm::IOStream serialStream;
 
 #endif	// MODM_ARDUINO_UNO_HPP

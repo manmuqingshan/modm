@@ -29,6 +29,6 @@ main()
 		// read the input pin
 		bool buttonState = PushButton::read();
 		// print button state
-		serialStream << buttonState << modm::endl;
+		MODM_LOG_INFO << buttonState << modm::endl;
 	}
 }

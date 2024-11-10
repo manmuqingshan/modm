@@ -19,27 +19,27 @@ struct DebugGpioPort : public Port
 	static void dumpShifts()
 	{
 		for (int ii=0; ii<7; ii++) {
-			serialStream << char(ii+'A') << " {";
+			MODM_LOG_INFO << char(ii+'A') << " {";
 			for (int jj=0; jj<Port::width; jj++) {
 				const auto p = Port::shift_masks[ii][jj];
-				serialStream << " ";
-				if (p >= 0) { serialStream << p; }
-				else { serialStream << " "; }
-				serialStream << " ";
-				if (jj != Port::width - 1) { serialStream << ","; }
+				MODM_LOG_INFO << " ";
+				if (p >= 0) { MODM_LOG_INFO << p; }
+				else { MODM_LOG_INFO << " "; }
+				MODM_LOG_INFO << " ";
+				if (jj != Port::width - 1) { MODM_LOG_INFO << ","; }
 			}
-			serialStream << "}" << modm::endl;
+			MODM_LOG_INFO << "}" << modm::endl;
 		}
 	}
 
 	static void dumpMasks()
 	{
 		for (int ii=0; ii<7; ii++) {
-			serialStream << char(ii+'A') << " " << modm::bin << Port::mask(ii) << modm::endl;
+			MODM_LOG_INFO << char(ii+'A') << " " << modm::bin << Port::mask(ii) << modm::endl;
 		}
-		serialStream << modm::endl;
+		MODM_LOG_INFO << modm::endl;
 		for (int ii=0; ii<7; ii++) {
-			serialStream << char(ii+'A') << " " << modm::bin << Port::inverted(ii) << modm::endl;
+			MODM_LOG_INFO << char(ii+'A') << " " << modm::bin << Port::inverted(ii) << modm::endl;
 		}
 	}
 };
@@ -64,23 +64,23 @@ int main()
 	static_assert(PinGroup3::number_of_ports == 1);
 	static_assert(PinGroup4::number_of_ports == 1);
 
-	DebugGpioPort<PinGroup>::dumpMasks();  serialStream << modm::endl;
-	DebugGpioPort<PinGroup2>::dumpMasks(); serialStream << modm::endl;
-	DebugGpioPort<PinGroup3>::dumpMasks(); serialStream << modm::endl;
-	DebugGpioPort<PinGroup4>::dumpMasks(); serialStream << modm::endl;
+	DebugGpioPort<PinGroup>::dumpMasks();  MODM_LOG_INFO << modm::endl;
+	DebugGpioPort<PinGroup2>::dumpMasks(); MODM_LOG_INFO << modm::endl;
+	DebugGpioPort<PinGroup3>::dumpMasks(); MODM_LOG_INFO << modm::endl;
+	DebugGpioPort<PinGroup4>::dumpMasks(); MODM_LOG_INFO << modm::endl;
 
-	DebugGpioPort<PinGroup>::dumpShifts();  serialStream << modm::endl;
-	DebugGpioPort<PinGroup2>::dumpShifts(); serialStream << modm::endl;
+	DebugGpioPort<PinGroup>::dumpShifts();  MODM_LOG_INFO << modm::endl;
+	DebugGpioPort<PinGroup2>::dumpShifts(); MODM_LOG_INFO << modm::endl;
 
-	PinGroup2::setInput(); serialStream << modm::bin << PinGroup2::read() << modm::endl;
-	PinGroup3::setInput(); serialStream << modm::bin << PinGroup3::read() << modm::endl;
-	PinGroup4::setInput(); serialStream << modm::bin << PinGroup4::read() << modm::endl;
-	serialStream << modm::endl;
+	PinGroup2::setInput(); MODM_LOG_INFO << modm::bin << PinGroup2::read() << modm::endl;
+	PinGroup3::setInput(); MODM_LOG_INFO << modm::bin << PinGroup3::read() << modm::endl;
+	PinGroup4::setInput(); MODM_LOG_INFO << modm::bin << PinGroup4::read() << modm::endl;
+	MODM_LOG_INFO << modm::endl;
 
 	PinGroup::setOutput(modm::Gpio::High); modm::delay(1s);
 
 	const auto fn_report = []() {
-		serialStream << modm::bin << PinGroup::read() << modm::endl; modm::delay(200ms);
+		MODM_LOG_INFO << modm::bin << PinGroup::read() << modm::endl; modm::delay(200ms);
 	};
 
 	while (true)
@@ -91,14 +91,14 @@ int main()
 		PinGroup::write(0b00111); fn_report();
 		PinGroup::write(0b01111); fn_report();
 		PinGroup::write(0b11111); fn_report();
-		serialStream << modm::endl;
+		MODM_LOG_INFO << modm::endl;
 
 		PinGroup::reset();
 		Pin0::set(); fn_report();
 		Pin1::set(); fn_report();
 		Pin2::set(); fn_report();
 		Pin3::set(); fn_report();
-		serialStream << modm::endl;
+		MODM_LOG_INFO << modm::endl;
 
 		// while (true);
 	}

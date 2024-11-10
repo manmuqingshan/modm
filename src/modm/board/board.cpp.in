@@ -11,6 +11,7 @@
 
 #include "board.hpp"
 #include <modm/architecture/interface/delay.hpp>
+#include <modm/architecture/interface/accessor.hpp>
 %% if with_assert
 #include <modm/architecture/interface/assert.hpp>
 %% endif
@@ -37,15 +38,15 @@ modm_extern_c void
 modm_abandon(const modm::AssertionInfo &info)
 {
 %% if with_logger
-	MODM_LOG_ERROR << "Assertion '" << info.name << "'";
+	MODM_LOG_ERROR << IFSS("Assertion '") << modm::accessor::asFlash(info.name) << IFSS("'");
 	if (info.context != uintptr_t(-1)) {
-		MODM_LOG_ERROR << " @ " << (void *) info.context <<
-						 " (" << (uint32_t) info.context << ")";
+		MODM_LOG_ERROR << IFSS(" @ ") << (void *) info.context <<
+						 IFSS(" (") << (uint32_t) info.context << IFSS(")");
 	}
 	#if MODM_ASSERTION_INFO_HAS_DESCRIPTION
-	MODM_LOG_ERROR << " failed!\n  " << info.description << "\nAbandoning...\n";
+	MODM_LOG_ERROR << IFSS(" failed!\n  ") << modm::accessor::asFlash(info.description) << IFSS("\nAbandoning...\n");
 	#else
-	MODM_LOG_ERROR << " failed!\nAbandoning...\n";
+	MODM_LOG_ERROR << IFSS(" failed!\nAbandoning...\n");
 	#endif
 %% else
 	(void)info;
