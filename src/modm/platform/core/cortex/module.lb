@@ -330,6 +330,9 @@ def validate(env):
 
 def build(env):
     env.substitutions = env.query("vector_table")
+    core = env.substitutions["core"]
+    with_icache = "m7" in core
+    with_dcache = with_icache and not (env.has_module(":platform:dma") or env.has_module(":platform:bdma"))
     env.substitutions.update({
         "target": env[":target"].identifier,
         "with_fault_storage": env.has_module(":platform:fault"),
@@ -337,9 +340,14 @@ def build(env):
         "with_assert": env.has_module(":architecture:assert"),
         "with_fpu": env.get("float-abi", "soft") != "soft",
         "with_multicore": env.has_module(":platform:multicore"),
-        "with_msplim": sum(c.isnumeric() for c in env.substitutions["core"]) == 2,
+        "with_msplim": sum(c.isnumeric() for c in core) == 2,
+        "with_icache": with_icache,
+        "with_dcache": with_dcache,
     })
     env.outbasepath = "modm/src/modm/platform/core"
+
+    if env.substitutions["with_icache"] and not env.substitutions["with_dcache"]:
+        env.log.warning("Cortex-M7 D-Cache is disabled due to using DMA!")
 
     # startup script
     env.template("reset_handler.sx.in")

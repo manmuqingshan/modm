@@ -24,6 +24,8 @@
 // ----------------------------------------------------------------------------
 // Default implementation of platform initialization
 modm_weak void modm_initialize_platform(void) {}
+extern void __modm_initialize_memory(void);
+extern int main(void);
 
 // ----------------------------------------------------------------------------
 // Linker section start and end pointers
@@ -96,26 +98,28 @@ void __modm_startup(void)
 	// Copy and zero all internal memory
 	table_copy(__table_copy_intern_start, __table_copy_intern_end);
 	table_zero(__table_zero_intern_start, __table_zero_intern_end);
-
-%% if "m7" in core
+%#
+%% if with_icache
 	// Enable instruction cache
 	SCB_InvalidateICache();
 	SCB_EnableICache();
-	// Enable data cache with write-through policy
+%% endif
+%% if with_dcache
+	// Enable data cache with default WBWA policy
 	SCB_InvalidateDCache();
 	SCB_EnableDCache();
 %% endif
-
+%#
 %% if core != "cortex-m0"
 	// Set the vector table location
 	SCB->VTOR = (uint32_t)__vector_table_{{ vector_table_location }}_start;
 %% endif
-
+%#
 %% if "m0" not in core
 	// Enable trapping of divide by zero for UDIV/SDIV instructions.
 	SCB->CCR |= SCB_CCR_DIV_0_TRP_Msk;
 %% endif
-
+%#
 	// Call all hardware initialize hooks
 	table_call(__hardware_init_start, __hardware_init_end);
 
@@ -124,16 +128,14 @@ void __modm_startup(void)
 	table_zero(__table_zero_extern_start, __table_zero_extern_end);
 
 	// Initialize heap as implemented by the heap option
-	extern void __modm_initialize_memory(void);
 	__modm_initialize_memory();
 
 	// Call all constructors of static objects
 	table_call(__init_array_start, __init_array_end);
 
 	// Call the application's entry point
-	extern int main(void);
 	main();
-
+%#
 %% if with_assert
 	// If main exits, assert here in debug mode
 	(void) modm_assert_continue_fail_debug(0,

@@ -19,7 +19,7 @@ implemented as follows:
 3. Call `modm_initialize_platform()` to initialize the custom device hardware.
 4. Copy data to internal RAM.
 5. Zero sections in internal RAM.
-6. Initialize ARM Cortex-M core: enable FPU and relocate vector table.
+6. Initialize ARM Cortex-M core: enable FPU, caches and relocate vector table.
 7. Execute shared hardware initialization functions.
 8. Copy data to *external* RAM.
 9. Zero sections in *external* RAM.
@@ -62,11 +62,11 @@ perhaps even write this function in Assembly if deemed necessary.
 
 ### Cache Initialization
 
-For Cortex-M7 devices, both the I-Cache and D-Cache are enabled by default with
-a write-through policy to significantly improve performance. However, it is
-important to note that manual invalidation of the caches is required on certain
-operations, such as when writing to Flash (I-Cache) or when using DMA
-(D-Cache). See the [CMSIS-Core documentation][cache_api] for more info.
+For Cortex-M7 devices, the I-Cache is enabled by default. The D-Cache with a
+write-back write-allocate policy is only enabled if the `modm:platform:dma`
+module is NOT selected. modm currently does not support allocating DMA buffers
+in non-cachable regions or granular cache invalidation. See the
+[CMSIS-Core Cache API][cache_api] for more information on cache management.
 
 
 ### Additional Initialization
