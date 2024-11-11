@@ -71,7 +71,7 @@ SpiMaster{{ id }}::transfer(
 	std::size_t txIndex = 0;
 
 	while (rxIndex < length) {
-		while ((txIndex < length) and !Hal::isTxFifoFull()) {
+		while ((txIndex < length) and !Hal::isTxFifoFull() and (txIndex - rxIndex) < Hal::FifoSize) {
 			Hal::write(tx ? tx[txIndex] : 0);
 			++txIndex;
 		}
@@ -110,7 +110,7 @@ SpiMaster{{ id }}::transfer(
 			while (rxIndex < length) {
 		default:
 		{
-				while ((txIndex < length) and !Hal::isTxFifoFull()) {
+				while ((txIndex < length) and !Hal::isTxFifoFull() and (txIndex - rxIndex) < Hal::FifoSize) {
 					Hal::write(tx ? tx[txIndex] : 0);
 					++txIndex;
 				}
