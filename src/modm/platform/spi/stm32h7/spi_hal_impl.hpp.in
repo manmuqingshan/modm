@@ -56,8 +56,7 @@ SpiHal{{ id }}::initialize(Prescaler prescaler,
 	// initialize with unlimited transfer size
 	setTransferSize(0);
 
-	// Pause master transfer if RX FIFO is full
-	SPI{{ id }}->CR1 = SPI_CR1_MASRX;
+	SPI{{ id }}->CR1 = 0;
 
 	SPI{{ id }}->CFG2 = static_cast<uint32_t>(dataMode)
 		| static_cast<uint32_t>(dataOrder)
