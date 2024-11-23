@@ -306,10 +306,19 @@ inline IOStream&
 flush(IOStream& ios)
 { return ios.flush(); }
 
-//// Write a newline. **DOES NOT FLUSH THE STREAM!**
+/// Write a newline. **DOES NOT FLUSH THE STREAM!**
 inline IOStream&
 endl(IOStream& ios)
+%% if is_hosted
+{
+	ios.endl();
+	ios.flush();
+	return ios;
+}
+%% else
 { return ios.endl(); }
+%% endif
+
 
 /// set the output mode to binary style
 inline IOStream&

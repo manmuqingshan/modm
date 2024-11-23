@@ -41,8 +41,8 @@ def prepare(module, options):
 
 def build(env):
     core = env[":target"].get_driver("core")["type"]
-    not_avr = not core.startswith("avr")
     env.substitutions = {
+        "is_hosted": env[":target"].identifier.platform == "hosted",
         "family": env[":target"].identifier.family,
         "core": core,
         "using_printf": env.has_module(":printf"),
