@@ -13,6 +13,7 @@
 #include "fiber_test.hpp"
 #include "shared.hpp"
 
+#include <modm/processing/timer.hpp>
 #include <modm-test/mock/clock.hpp>
 
 using namespace std::chrono_literals;
@@ -258,6 +259,82 @@ FiberTest::testStopToken()
 		fiber1.request_stop();
 		modm::this_fiber::yield(); // goto 4
 		TEST_ASSERT_EQUALS(state++, 6u);
+	});
+	modm::fiber::Scheduler::run();
+}
+
+void
+FiberTest::testTimeoutWait()
+{
+	modm::ShortTimeout timeout(20ms);
+	modm::fiber::Task fiber1(stack1, [&]
+	{
+		TEST_ASSERT_EQUALS(state++, 0u);
+
+		timeout.wait();
+		TEST_ASSERT_EQUALS(state++, 5u);
+
+	});
+	modm::fiber::Task fiber2(stack2, [&]
+	{
+		TEST_ASSERT_EQUALS(state++, 1u);
+		modm::this_fiber::yield();
+		TEST_ASSERT_EQUALS(state++, 2u);
+		test_clock_ms::increment(1);
+		modm::this_fiber::yield();
+		TEST_ASSERT_EQUALS(state++, 3u);
+		test_clock_ms::increment(10);
+		modm::this_fiber::yield();
+		TEST_ASSERT_EQUALS(state++, 4u);
+		test_clock_ms::increment(30);
+		modm::this_fiber::yield(); // goto 3
+
+		TEST_ASSERT_EQUALS(state++, 6u);
+	});
+	modm::fiber::Scheduler::run();
+}
+
+void
+FiberTest::testPeriodicTimerWait()
+{
+	modm::ShortPeriodicTimer timer(20ms);
+	modm::fiber::Task fiber1(stack1, [&]
+	{
+		TEST_ASSERT_EQUALS(state++, 0u);
+
+		TEST_ASSERT_EQUALS(timer.wait(), 1u);
+		TEST_ASSERT_EQUALS(state++, 3u);
+
+		TEST_ASSERT_EQUALS(timer.wait(), 1u); // goto 4
+		TEST_ASSERT_EQUALS(state++, 6u);
+
+		TEST_ASSERT_EQUALS(timer.wait(), 3u); // goto 7
+		TEST_ASSERT_EQUALS(state++, 9u);
+
+	});
+	modm::fiber::Task fiber2(stack2, [&]
+	{
+		TEST_ASSERT_EQUALS(state++, 1u);
+		modm::this_fiber::yield();
+		TEST_ASSERT_EQUALS(state++, 2u);
+		test_clock_ms::increment(30);
+		modm::this_fiber::yield(); // goto 3
+
+		TEST_ASSERT_EQUALS(state++, 4u);
+		test_clock_ms::increment(9);
+		modm::this_fiber::yield();
+		TEST_ASSERT_EQUALS(state++, 5u);
+		test_clock_ms::increment(1);
+		modm::this_fiber::yield(); // goto 6
+
+		TEST_ASSERT_EQUALS(state++, 7u);
+		test_clock_ms::increment(15);
+		modm::this_fiber::yield();
+		TEST_ASSERT_EQUALS(state++, 8u);
+		test_clock_ms::increment(50);
+		modm::this_fiber::yield(); // goto 9
+
+		TEST_ASSERT_EQUALS(state++, 10u);
 	});
 	modm::fiber::Scheduler::run();
 }

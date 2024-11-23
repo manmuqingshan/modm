@@ -53,7 +53,7 @@ yield();
 modm::fiber::id
 get_id();
 
-/// Yields the current fiber while `bool condition()` returns true.
+/// Yields the current fiber until `bool condition()` returns true.
 /// @warning If `bool condition()` is true on first call, no yield is performed!
 template< class Function >
 requires requires { std::is_invocable_r_v<bool, Function, void>; }

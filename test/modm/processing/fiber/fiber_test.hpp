@@ -43,4 +43,10 @@ public:
 
 	void
 	testStopToken();
+
+	void
+	testTimeoutWait();
+
+	void
+	testPeriodicTimerWait();
 };
