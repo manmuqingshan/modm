@@ -106,7 +106,7 @@ void __modm_startup(void)
 %% endif
 %% if with_dcache
 	// Enable data cache with default WBWA policy
-	SCB_InvalidateDCache();
+	SCB_CleanInvalidateDCache();
 	SCB_EnableDCache();
 %% endif
 %#
