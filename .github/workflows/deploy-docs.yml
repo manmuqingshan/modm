@@ -8,9 +8,9 @@ on:
 
 jobs:
   build-upload-docs:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/modm-ext/modm-build-base:2023-03-12
+      image: ghcr.io/modm-ext/modm-build-base:2024-12-01
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
           git config --global --add safe.directory /__w/modm/modm
       - name: Update lbuild
         run: |
-          pip3 install --upgrade --upgrade-strategy=eager modm
+          pip3 install --upgrade --upgrade-strategy=eager --break-system-packages modm
       - name: Mkdocs info
         run: |
           mkdocs --version
@@ -49,9 +49,9 @@ jobs:
 
   # Niklas: Running on the old container until I can figure out why the doc generator hangs
   api-docs-all:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/modm-ext/modm-build-base:2022-09-27
+      image: ghcr.io/modm-ext/modm-build-base:2024-12-01
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
           git config --global --add safe.directory /__w/modm/modm
       - name: Update lbuild
         run: |
-          pip3 install --upgrade --upgrade-strategy=eager modm
+          pip3 install --upgrade --upgrade-strategy=eager --break-system-packages modm
       - name: Full run of docs.modm.io-generator-script
         run: |
           export TERM=xterm-256color
