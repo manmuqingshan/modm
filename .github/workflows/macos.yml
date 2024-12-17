@@ -25,15 +25,10 @@ jobs:
           brew link --force avr-gcc@13 arm-gcc-bin@13
           # brew upgrade boost gcc git || true
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
       - name: Setup environment - Python pip
         run: |
-          pip3 install --user modm scons
+          pip3 install --upgrade --upgrade-strategy=eager --break-system-packages modm scons
           echo "/usr/local/bin" >> $GITHUB_PATH
-          echo "/Users/runner/Library/Python/3.12/bin" >> $GITHUB_PATH
 
       - name: Dump environment
         run: |
