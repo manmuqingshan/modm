@@ -196,7 +196,7 @@ brew link --force avr-gcc@13
 To compile modm *for x86_64 macOS* you need to install these tools too:
 
 ```sh
-brew install boost gcc
+brew install boost gcc@13
 ```
 
 
