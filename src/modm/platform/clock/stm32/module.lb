@@ -39,7 +39,7 @@ def build(env):
         properties["hsi_frequency"] = 48_000_000
         properties["lsi_frequency"] = 32_000
         properties["boot_frequency"] = 12_000_000
-    elif target["family"] in ["f1", "f3"]:
+    elif target["family"] in ["f0", "f1", "f3"]:
         properties["hsi_frequency"] = 8_000_000
         properties["lsi_frequency"] = 40_000
         properties["boot_frequency"] = properties["hsi_frequency"]
@@ -187,6 +187,9 @@ def build(env):
             nper = "DSI"
         if "Eth" in all_peripherals and per == "ETHMAC":
             per = "Eth"
+        if "Rtc" in all_peripherals and per == "RTCAPB":
+            per = "RTC"
+            nper = "RTCAPB"
         # Fix USBOTG OTG
         if target.family == "u5" and per == "OTG":
             per = "Usbotgfs"
@@ -200,7 +203,9 @@ def build(env):
         if per.capitalize() not in all_peripherals:
             continue
         if "EN" in mode:
-            rcc_enable[per.capitalize()] = (nper, mode["EN"])
+            kw = per.capitalize()
+            if kw not in rcc_enable:
+                rcc_enable[kw] = (nper, mode["EN"])
         if "RST" in mode:
             rcc_reset[per.capitalize()] = (nper, mode["RST"])
 
