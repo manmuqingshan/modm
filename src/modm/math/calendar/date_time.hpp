@@ -219,11 +219,13 @@ public:
 	static consteval DateTime
 	fromBuildTime()
 	{
-		// Example: "Mon Dec 23 17:45:35 2024"
+		// Example: "Mon Dec 23 17:45:35 2024" or "Wed Jan  1 14:16:06 2025"
 		const std::string_view timestamp{__TIMESTAMP__};
+
 		const auto to_uint = [=](uint8_t offset, uint8_t length) -> uint16_t
 		{
-			const auto str = timestamp.substr(offset, length);
+			auto str = timestamp.substr(offset, length);
+			if (str[0] == ' ') str = timestamp.substr(offset+1, length-1);
 			int integer;
 			(void) std::from_chars(str.begin(), str.end(), integer);
 			return uint16_t(integer);
