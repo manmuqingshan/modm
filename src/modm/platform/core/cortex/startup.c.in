@@ -95,20 +95,18 @@ table_zero(const uint32_t *const start, const uint32_t *const end)
 // Called by Reset_Handler in reset_handler.s
 void __modm_startup(void)
 {
+%% if enable_icache
+	SCB_EnableICache();
+%% elif has_icache
+	SCB_DisableICache();
+%% endif
+%% if has_dcache
+	SCB_DisableDCache();
+%% endif
+%#
 	// Copy and zero all internal memory
 	table_copy(__table_copy_intern_start, __table_copy_intern_end);
 	table_zero(__table_zero_intern_start, __table_zero_intern_end);
-%#
-%% if with_icache
-	// Enable instruction cache
-	SCB_EnableICache();
-	SCB_InvalidateICache();
-%% endif
-%% if with_dcache
-	// Enable data cache with default WBWA policy
-	SCB_EnableDCache();
-	SCB_CleanInvalidateDCache();
-%% endif
 %#
 %% if core != "cortex-m0"
 	// Set the vector table location
@@ -129,7 +127,12 @@ void __modm_startup(void)
 
 	// Initialize heap as implemented by the heap option
 	__modm_initialize_memory();
-
+%#
+%% if enable_dcache
+	// Enable D-Cache with default WBWA policy *after* all memory operations
+	SCB_EnableDCache();
+%#
+%% endif
 	// Call all constructors of static objects
 	table_call(__init_array_start, __init_array_end);
 
