@@ -365,10 +365,13 @@ def build(env):
 
     # startup script
     env.template("reset_handler.sx.in")
-    env.template("startup.c.in")
+    ops = env.template("startup.c.in")
+    # Prevent use of slow bytewise memcpy and memset in startup code
+    env.collect(":build:cflags", "-fno-builtin", operations=ops)
+    env.collect(":build:linkflags", "-nostartfiles")
+
     env.template("vectors.c.in")
     env.template("vectors.hpp.in")
-    env.collect(":build:linkflags", "-nostartfiles")
 
     # dealing with runtime assertions
     if env.has_module(":architecture:assert"):
